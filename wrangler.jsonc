@@ -17,8 +17,8 @@
     "d1_databases": [
         {
             "binding": "DB",
-            "database_name": "navigation-db",
-            "database_id": "8c8629a9-13de-4537-b22c-d002722a389b"
+            "database_name": "maotu002-db",
+            "database_id": "ce7516a7-a289-43a6-a025-41e5142047f3"
         }
     ],
     "vars": {

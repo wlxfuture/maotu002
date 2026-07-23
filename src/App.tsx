@@ -269,9 +269,9 @@ function App() {
       setLoginError(null);
 
       // 调用登录接口
-      const success = await api.login(username, password, rememberMe);
+      const result = await api.login(username, password, rememberMe);
 
-      if (success) {
+      if (result.success && result.token) {
         // 登录成功
         setIsAuthenticated(true);
         setIsAuthRequired(false);
@@ -280,12 +280,14 @@ function App() {
         await fetchConfigs();
       } else {
         // 登录失败
-        handleError('用户名或密码错误');
+        api.logout();
+        setLoginError(result.message || '用户名或密码错误');
         setIsAuthenticated(false);
       }
     } catch (error) {
       console.error('登录失败:', error);
-      handleError('登录失败: ' + (error instanceof Error ? error.message : '未知错误'));
+      api.logout();
+      setLoginError('登录失败: ' + (error instanceof Error ? error.message : '未知错误'));
       setIsAuthenticated(false);
     } finally {
       setLoginLoading(false);
@@ -418,13 +420,18 @@ function App() {
       setGroups(groupsWithSites);
     } catch (error) {
       console.error('加载数据失败:', error);
-      handleError('加载数据失败: ' + (error instanceof Error ? error.message : '未知错误'));
 
-      // 如果因为认证问题导致加载失败，处理认证状态
+      // 认证失效时直接返回登录页，避免继续停留在后台并重复弹出错误
       if (error instanceof Error && error.message.includes('认证')) {
+        api.logout();
+        setGroups([]);
         setIsAuthRequired(true);
         setIsAuthenticated(false);
+        setLoginError('登录状态已失效，请重新登录');
+        return;
       }
+
+      handleError('加载数据失败: ' + (error instanceof Error ? error.message : '未知错误'));
     } finally {
       setLoading(false);
     }

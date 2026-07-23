@@ -1,5 +1,5 @@
 // src/components/SiteCard.tsx
-import { useState, memo } from 'react';
+import { useEffect, useMemo, useState, memo } from 'react';
 import { Site } from '../API/http';
 import SiteSettingsModal from './SiteSettingsModal';
 import { useSortable } from '@dnd-kit/sortable';
@@ -27,6 +27,29 @@ interface SiteCardProps {
   iconApi?: string; // 添加iconApi属性
 }
 
+const DEFAULT_ICON_API = 'https://www.faviconextractor.com/favicon/{domain}?larger=true';
+
+function buildIconSources(icon: string, url: string, iconApi?: string): string[] {
+  const sources: string[] = [];
+
+  if (icon?.trim()) {
+    sources.push(icon.trim());
+  }
+
+  try {
+    const siteUrl = /^https?:\/\//i.test(url) ? url : `https://${url}`;
+    const parsedUrl = new URL(siteUrl);
+    const apiTemplate = iconApi?.trim() || DEFAULT_ICON_API;
+
+    sources.push(apiTemplate.replace('{domain}', parsedUrl.hostname));
+    sources.push(new URL('/favicon.ico', parsedUrl.origin).toString());
+  } catch {
+    // URL 不合法时使用站点名称首字母作为最终回退
+  }
+
+  return [...new Set(sources)];
+}
+
 // 使用memo包装组件以减少不必要的重渲染
 const SiteCard = memo(function SiteCard({
   site,
@@ -37,8 +60,19 @@ const SiteCard = memo(function SiteCard({
   iconApi, // 添加iconApi参数
 }: SiteCardProps) {
   const [showSettings, setShowSettings] = useState(false);
-  const [iconError, setIconError] = useState(!site.icon);
+  const iconSources = useMemo(() => buildIconSources(site.icon, site.url, iconApi), [
+    site.icon,
+    site.url,
+    iconApi,
+  ]);
+  const [iconSourceIndex, setIconSourceIndex] = useState(0);
   const [imageLoaded, setImageLoaded] = useState(false);
+  const currentIcon = iconSources[iconSourceIndex] || null;
+
+  useEffect(() => {
+    setIconSourceIndex(0);
+    setImageLoaded(false);
+  }, [iconSources]);
 
   // 使用dnd-kit的useSortable hook
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
@@ -78,7 +112,8 @@ const SiteCard = memo(function SiteCard({
 
   // 处理图标加载错误
   const handleIconError = () => {
-    setIconError(true);
+    setImageLoaded(false);
+    setIconSourceIndex((currentIndex) => currentIndex + 1);
   };
 
   // 处理图片加载完成
@@ -136,7 +171,7 @@ const SiteCard = memo(function SiteCard({
             </Box>
             {/* 图标和名称 */}
             <Box display='flex' alignItems='center' mb={1}>
-              {!iconError && site.icon ? (
+              {currentIcon ? (
                 <Box position='relative' mr={1.5} width={32} height={32} flexShrink={0}>
                   <Skeleton
                     variant='rounded'
@@ -149,8 +184,9 @@ const SiteCard = memo(function SiteCard({
                   />
                   <Fade in={imageLoaded} timeout={500}>
                     <Box
+                      key={currentIcon}
                       component='img'
-                      src={site.icon}
+                      src={currentIcon}
                       alt={site.name}
                       sx={{
                         width: 32,
@@ -225,7 +261,7 @@ const SiteCard = memo(function SiteCard({
             >
               {/* 图标和名称 */}
               <Box display='flex' alignItems='center' mb={1}>
-                {!iconError && site.icon ? (
+                {currentIcon ? (
                   <Box position='relative' mr={1.5} width={32} height={32} flexShrink={0}>
                     <Skeleton
                       variant='rounded'
@@ -238,8 +274,9 @@ const SiteCard = memo(function SiteCard({
                     />
                     <Fade in={imageLoaded} timeout={500}>
                       <Box
+                        key={currentIcon}
                         component='img'
-                        src={site.icon}
+                        src={currentIcon}
                         alt={site.name}
                         sx={{
                           width: 32,

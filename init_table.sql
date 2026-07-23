@@ -31,4 +31,4 @@ CREATE TABLE IF NOT EXISTS configs (
 );
 
 -- 设置初始化标志
-INSERT INTO configs (key, value) VALUES ('DB_INITIALIZED', 'true');
+INSERT OR IGNORE INTO configs (key, value) VALUES ('DB_INITIALIZED', 'true');
